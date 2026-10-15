@@ -1,0 +1,33 @@
+.vscode/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.agents/
+
+# Model weights and generated outputs
+weights/
+checkpoints/
+*.ckpt
+*.pth
+*.pt
+anomaly/
+cropped_images/
+real_data/
+results/
+demo_light_blur_results/
+
+# Local datasets; retain source files in these directories
+data/**/*.jpg
+data/**/*.jpeg
+data/**/*.png
+data/**/*.bmp
+data/**/*.npy
+data/**/*.npz
+datasets/**/*.jpg
+datasets/**/*.jpeg
+datasets/**/*.png
+datasets/**/*.bmp
