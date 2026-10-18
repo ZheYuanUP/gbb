@@ -41,8 +41,23 @@ VAL_RATIO=0
 SEED=1
 GAMMA=0.95
 ETA_MIN=1e-6
-BCE_WEIGHT=1.0
-DICE_WEIGHT=1.0
+# Environment overrides propagate through run_device_folds.sh and
+# train_and_test_hedian.sh to every selected fold.
+LOSS_TYPE=${LOSS_TYPE:-bce}
+FOCAL_GAMMA=${FOCAL_GAMMA:-2.0}
+FOCAL_ALPHA=${FOCAL_ALPHA:-}
+BCE_WEIGHT=${BCE_WEIGHT:-1.0}
+DICE_WEIGHT=0.0
+
+if [[ "$LOSS_TYPE" != bce && "$LOSS_TYPE" != focal ]]; then
+  echo "Error: LOSS_TYPE must be bce or focal, got: $LOSS_TYPE" >&2
+  exit 2
+fi
+LOSS_ARGS=(--loss-type "$LOSS_TYPE" --focal-gamma "$FOCAL_GAMMA")
+if [[ -n "$FOCAL_ALPHA" ]]; then
+  LOSS_ARGS+=(--focal-alpha "$FOCAL_ALPHA")
+fi
+echo "Fold $FOLD loss: $LOSS_TYPE, gamma=$FOCAL_GAMMA, alpha=${FOCAL_ALPHA:-disabled}, weight=$BCE_WEIGHT"
 
 # Augmentation settings
 AUG_HFLIP_P=0.0
@@ -101,7 +116,8 @@ torchrun \
   --weight-decay $WEIGHT_DECAY \
   --val-ratio $VAL_RATIO \
   --seed $SEED \
-  --bce-weight $BCE_WEIGHT \
+  "${LOSS_ARGS[@]}" \
+  --bce-weight "$BCE_WEIGHT" \
   --dice-weight $DICE_WEIGHT \
   --init-checkpoint "$INIT_CHECKPOINT" \
   --best-path "$BEST_PATH" \

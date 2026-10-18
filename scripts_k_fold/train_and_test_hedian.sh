@@ -3,6 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(dirname "$SCRIPT_DIR")"
+# Loss settings are inherited by training in every selected fold.
+# Example: LOSS_TYPE=focal FOCAL_GAMMA=2 bash scripts_k_fold/train_and_test_hedian.sh 0
 FOLD=${1:?Usage: bash scripts_k_fold/train_and_test_hedian.sh FOLD}
 if ! [[ "$FOLD" =~ ^([0-9]|1[01])$ ]]; then
   echo "Error: FOLD must be an integer from 0 to 11, got: $FOLD" >&2
