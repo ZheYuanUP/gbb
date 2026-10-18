@@ -46,8 +46,8 @@ ETA_MIN=1e-6
 LOSS_TYPE=${LOSS_TYPE:-bce}
 FOCAL_GAMMA=${FOCAL_GAMMA:-2.0}
 FOCAL_ALPHA=${FOCAL_ALPHA:-}
-BCE_WEIGHT=${BCE_WEIGHT:-1.0}
-DICE_WEIGHT=0.0
+BCE_WEIGHT=1.0
+DICE_WEIGHT=1.0
 
 if [[ "$LOSS_TYPE" != bce && "$LOSS_TYPE" != focal ]]; then
   echo "Error: LOSS_TYPE must be bce or focal, got: $LOSS_TYPE" >&2
@@ -117,7 +117,7 @@ torchrun \
   --val-ratio $VAL_RATIO \
   --seed $SEED \
   "${LOSS_ARGS[@]}" \
-  --bce-weight "$BCE_WEIGHT" \
+  --bce-weight $BCE_WEIGHT \
   --dice-weight $DICE_WEIGHT \
   --init-checkpoint "$INIT_CHECKPOINT" \
   --best-path "$BEST_PATH" \

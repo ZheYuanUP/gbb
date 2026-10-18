@@ -3,8 +3,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Loss settings are inherited by training in every selected fold.
-# Example: LOSS_TYPE=focal FOCAL_GAMMA=2 bash scripts_k_fold/run_device_folds.sh 0
 # With no arguments, run all 12 folds sequentially. Pass fold numbers to run a
 # subset, for example: bash scripts_k_fold/run_device_folds.sh 0 3 7
 if [[ $# -eq 0 ]]; then
