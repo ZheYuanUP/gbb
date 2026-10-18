@@ -41,11 +41,14 @@ VAL_RATIO=0
 SEED=1
 GAMMA=0.95
 ETA_MIN=1e-6
-# Environment overrides propagate through run_device_folds.sh and
-# train_and_test_hedian.sh to every selected fold.
-LOSS_TYPE=${LOSS_TYPE:-bce}
-FOCAL_GAMMA=${FOCAL_GAMMA:-2.0}
-FOCAL_ALPHA=${FOCAL_ALPHA:-}
+# 损失函数选择：下面两行只启用一行；当前使用 Focal Loss。
+LOSS_TYPE=focal        # 使用 Focal Loss
+# LOSS_TYPE=bce        # 使用 BCE：注释掉上一行，再取消本行注释
+
+# 以下两个参数仅在 LOSS_TYPE=focal 时生效，BCE 模式忽略。
+FOCAL_GAMMA=2.0        # 聚焦参数 gamma；越大，对简单样本的抑制越强
+FOCAL_ALPHA=""        # 空字符串表示不启用类别权重；例如 0.75 表示缺陷权重 0.75、背景权重 0.25
+# 所有选中的折共用本配置；直接运行启动脚本即可，无需设置临时环境变量。
 BCE_WEIGHT=1.0
 DICE_WEIGHT=1.0
 
