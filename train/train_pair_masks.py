@@ -153,8 +153,22 @@ def segmentation_metrics(tp, fp, fn):
     return dice, iou
 
 
+def segmentation_loss(pred, target, loss_type='bce', gamma=2.0, alpha=None):
+    """Compute BCE or focal loss from the model's sigmoid probabilities."""
+    bce = F.binary_cross_entropy(pred, target, reduction='none')
+    if loss_type == 'bce':
+        return bce.mean()
+    if loss_type != 'focal':
+        raise ValueError(f'Unknown loss type: {loss_type}')
+    pt = pred * target + (1.0 - pred) * (1.0 - target)
+    loss = (1.0 - pt).pow(gamma) * bce
+    if alpha is not None:
+        loss = (alpha * target + (1.0 - alpha) * (1.0 - target)) * loss
+    return loss.mean()
+
+
 @torch.no_grad()
-def run_eval(model, loader, device, bce_weight):
+def run_eval(model, loader, device, bce_weight, loss_type='bce', focal_gamma=2.0, focal_alpha=None):
     model.eval()
     total_loss, total_n, total_tp, total_fp, total_fn = 0.0, 0, 0, 0, 0
     for data in loader:
@@ -164,7 +178,7 @@ def run_eval(model, loader, device, bce_weight):
         }
         mask = data['query_mask'].to(device, non_blocking=True)
         pred = model(batch)
-        loss = bce_weight * F.binary_cross_entropy(pred, mask)
+        loss = bce_weight * segmentation_loss(pred, mask, loss_type, focal_gamma, focal_alpha)
         total_loss += loss.item() * mask.size(0)
         total_n += mask.size(0)
         tp, fp, fn = binary_counts(pred, mask)
@@ -321,6 +335,10 @@ def parse_args():
     p.add_argument('--val-ratio', type=float, default=0.1)
     p.add_argument('--seed', type=int, default=1)
     p.add_argument('--bce-weight', type=float, default=1.0)
+    p.add_argument('--loss-type', choices=['bce', 'focal'], default='bce')
+    p.add_argument('--focal-gamma', type=float, default=2.0)
+    p.add_argument('--focal-alpha', type=float, default=None,
+                   help='Optional positive-pixel weight in [0, 1]; negative pixels use 1-alpha.')
     p.add_argument(
         '--dice-weight',
         type=float,
@@ -349,8 +367,12 @@ def parse_args():
     p.add_argument('--aug-gaussian-blur-sigma-min', type=float, default=0.1)
     p.add_argument('--aug-gaussian-blur-sigma-max', type=float, default=2.0)
     args = p.parse_args()
+    if not np.isfinite(args.focal_gamma) or args.focal_gamma < 0:
+        p.error('--focal-gamma must be finite and non-negative')
+    if args.focal_alpha is not None and not 0 <= args.focal_alpha <= 1:
+        p.error('--focal-alpha must be in [0, 1]')
     # Keep accepting the legacy CLI option so existing launch scripts work,
-    # but record the effective BCE-only configuration truthfully.
+    # but record the effective configuration truthfully.
     args.dice_weight = 0.0
     return args
 
@@ -506,7 +528,8 @@ def main():
         )
         print(
             f'[train_pair_masks] lr={args.lr} wd={args.weight_decay} scheduler={args.scheduler} '
-            f'bce={args.bce_weight} dice_loss=disabled',
+            f'loss={args.loss_type} loss_weight={args.bce_weight} '
+            f'focal_gamma={args.focal_gamma} focal_alpha={args.focal_alpha} dice_loss=disabled',
             flush=True,
         )
         print(
@@ -541,7 +564,9 @@ def main():
 
             optimizer.zero_grad(set_to_none=True)
             pred = model(batch)
-            loss = args.bce_weight * F.binary_cross_entropy(pred, mask)
+            loss = args.bce_weight * segmentation_loss(
+                pred, mask, args.loss_type, args.focal_gamma, args.focal_alpha
+            )
             loss.backward()
             optimizer.step()
 
@@ -560,7 +585,8 @@ def main():
         )
         train_dice, train_iou = segmentation_metrics(train_tp, train_fp, train_fn)
         val_metrics = (
-            run_eval(model, val_loader, device, args.bce_weight)
+            run_eval(model, val_loader, device, args.bce_weight,
+                     args.loss_type, args.focal_gamma, args.focal_alpha)
             if val_loader is not None else None
         )
         save_metric = val_metrics['loss'] if val_metrics is not None else train_loss

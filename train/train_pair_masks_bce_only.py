@@ -41,6 +41,7 @@ def zero_dice_loss(pred, target, eps=1e-6):
 
 def main():
     sys.argv = force_option(sys.argv, '--dice-weight', 0.0)
+    sys.argv = force_option(sys.argv, '--loss-type', 'bce')
     from train import train_pair_masks as trainer
 
     trainer.dice_loss = zero_dice_loss

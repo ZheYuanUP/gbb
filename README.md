@@ -61,3 +61,23 @@ If you find this code useful in your research, please consider citing us:
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=gaobb/MetaUAS&type=Timeline)](https://www.star-history.com/#gaobb/MetaUAS&Timeline)
+
+## Pair-mask training loss
+
+`train/train_pair_masks.py` uses BCE by default. To try pixel-wise Focal Loss,
+add these options to your existing training command:
+
+```bash
+python train/train_pair_masks.py <existing-data-and-training-options> --loss-type focal --focal-gamma 2
+```
+
+Focal Loss consumes the model's sigmoid probabilities. Training and validation
+use the same loss. `--focal-alpha` is optional (disabled by default); when set,
+it weights defect pixels by alpha and background pixels by 1-alpha.
+`--bce-weight` scales either selected loss for compatibility. Dice loss remains
+disabled, while Dice and IoU metrics and best-Dice checkpoints remain available.
+The `train/train_pair_masks_bce_only.py` entry point always forces BCE.
+
+Compare BCE and Focal runs using the same data split and training settings, with
+separate experiment/checkpoint paths. Compare validation Dice/IoU and error
+patterns rather than the numerical loss values across different loss types.
