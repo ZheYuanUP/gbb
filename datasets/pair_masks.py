@@ -90,6 +90,22 @@ def resolve_path(root, path):
     return path if path.is_absolute() else Path(root) / path
 
 
+def resolve_test_image_path(root, path):
+    """Resolve a manifest image by its stem, regardless of file extension."""
+    path = resolve_path(root, path)
+    if path.is_file():
+        return path
+    matches = sorted(
+        candidate for candidate in path.parent.iterdir()
+        if candidate.is_file() and candidate.stem == path.stem
+    ) if path.parent.is_dir() else []
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise ValueError(f'Multiple files match image name {path}: {matches}')
+    raise FileNotFoundError(f'No image found with name {path.stem!r} in {path.parent}')
+
+
 def read_rgb(path):
     with Image.open(path) as image:
         return image.convert('RGB')
@@ -286,9 +302,9 @@ class PairMaskTestDataset(Dataset):
     def __getitem__(self, index):
         row = self.rows[index]
         original, changed, mask = row_paths(row)
-        prompt_path = resolve_path(self.data_root, original)
-        query_path = resolve_path(self.data_root, changed)
-        mask_path = resolve_path(self.data_root, mask)
+        prompt_path = resolve_test_image_path(self.data_root, original)
+        query_path = resolve_test_image_path(self.data_root, changed)
+        mask_path = resolve_test_image_path(self.data_root, mask)
 
         prompt = pil_to_tensor(read_rgb(prompt_path)).float() / 255.0
         query = pil_to_tensor(read_rgb(query_path)).float() / 255.0
